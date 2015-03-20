@@ -1137,10 +1137,22 @@ Return a list (HIGH LOW USEC) as in `current-time'."
   ;; log message; string
   message)
 
+(defvar-local logcat--cached-header-length nil)
+
 (defun logcat--read-packet ()
   (let* ((start (point))
          (payload-length (logcat--read-u16))
-         (raw-header-length (logcat--read-u16))
+         ;; The header-length field was a padding field in old
+         ;; versions of the protocol, and newer versions of Android
+         ;; correctly zero-fill it when emitting the old protocol.
+         ;; Old versions of Android leave this field filled with
+         ;; garbage.  If we don't see a value in this field that makes
+         ;; sense, assume we're looking at old-protocol records with
+         ;; junk lengths and ignore the field for future records.
+         (raw-header-length (let ((rv (logcat--read-u16)))
+                              (or logcat--cached-header-length
+                                  (setf logcat--cached-header-length
+                                        (if (<= 20 rv 28) rv 0)))))
          (header-length
           (if (zerop raw-header-length) 20 raw-header-length))
          (payload-start (+ start header-length))
