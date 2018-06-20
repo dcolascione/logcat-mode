@@ -1217,12 +1217,33 @@ is incomplete, return nil."
                                        (logcat--chomp reason) stderr))))))
           (kill-buffer buffer))))))
 
+(defun logcat--fb-adb-determine-version ()
+  (let* ((fb-adb (executable-find logcat-fb-adb-program))
+         (content (shell-command-to-string (format "%s version" fb-adb))))
+    (when (string-match "version \\([0-9]*\\).\\([0-9]*\\).\\([0-9]*\\)" content)
+      (list (match-string-no-properties 1 content)
+            (match-string-no-properties 2 content)
+            (match-string-no-properties 3 content)))))
+
+(defun logcat--fb-adb-get-versioned-commandline ()
+  (let* ((version-list (logcat--fb-adb-determine-version))
+         (adb-major-version (nth-value 0 version-list))
+         (adb-minor-version (nth-value 1 version-list))
+         (adb-patch-version (nth-value 2 version-list))
+         (adb-logcat-base-subarg "logcat -B '*:V'"))
+    (if (string-equal adb-major-version "1")
+        adb-logcat-base-subarg
+      (format "rcmd %s" adb-logcat-base-subarg)
+      )
+    )
+  )
+
 (defun logcat--start-process (exe extra-arguments handle-log-record)
   (let ((cmdline (concat "exec "
                          (shell-quote-argument exe)
                          " "
                          extra-arguments
-                         " rcmd logcat -B '*:V'"))
+                         (logcat--fb-adb-get-versioned-commandline)))
         (process nil)
         (buffer nil)
         (stderr-file nil))
