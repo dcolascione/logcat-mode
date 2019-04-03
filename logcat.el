@@ -1230,13 +1230,10 @@ is incomplete, return nil."
          (adb-major-version (nth-value 0 version-list))
          (adb-minor-version (nth-value 1 version-list))
          (adb-patch-version (nth-value 2 version-list))
-         (adb-logcat-base-subarg "logcat -B '*:V'"))
+         (adb-logcat-base-subarg "/system/bin/logcat -B '*:V'"))
     (if (string-equal adb-major-version "1")
         adb-logcat-base-subarg
-      (format "rcmd %s" adb-logcat-base-subarg)
-      )
-    )
-  )
+      (format "rcmd %s" adb-logcat-base-subarg))))
 
 (defun logcat--start-process (exe extra-arguments handle-log-record)
   (let ((cmdline (concat "exec "
